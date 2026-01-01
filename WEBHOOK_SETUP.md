@@ -24,7 +24,8 @@
    - It will look like: `https://your-app-name.up.railway.app`
 
 4. **Copy the Full URL:**
-   - Your webhook URL will be: `https://your-app-name.up.railway.app/webhook`
+   - Your webhook URL will be: `https://[your-railway-domain]/webhook`
+   - Example: `https://web-production-88d3.up.railway.app/webhook`
    - Make sure it includes:
      - `https://` (required by Telegram)
      - Your app domain (e.g., `your-app-name.up.railway.app`)
@@ -46,7 +47,7 @@ curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://your-a
 
 **Example:**
 ```bash
-curl "https://api.telegram.org/bot8356283788:AAGLDJtWcGfRWvxk_JnPWJ1SlmgbhE7a8_0/setWebhook?url=https://keralarandomchats.up.railway.app/webhook"
+curl "https://api.telegram.org/bot8356283788:AAGLDJtWcGfRWvxk_JnPWJ1SlmgbhE7a8_0/setWebhook?url=https://web-production-88d3.up.railway.app/webhook"
 ```
 
 **Expected Response:**

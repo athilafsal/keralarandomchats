@@ -17,7 +17,18 @@ async def get_pool() -> asyncpg.Pool:
     global _pool
     if _pool is None:
         if not settings.database_url:
-            raise ValueError("DATABASE_URL not set. Please configure your database connection.")
+            error_msg = (
+                "❌ DATABASE_URL environment variable is not set!\n\n"
+                "To fix this in Railway:\n"
+                "1. Go to Railway dashboard → Your project\n"
+                "2. Click 'New' → 'Database' → 'Add PostgreSQL'\n"
+                "3. Railway will automatically provide DATABASE_URL\n"
+                "4. Make sure the PostgreSQL service is in the same project as your bot\n"
+                "5. Redeploy your service\n\n"
+                "The DATABASE_URL is automatically set when you add a PostgreSQL addon."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
         
         _pool = await asyncpg.create_pool(
             settings.database_url,
