@@ -15,8 +15,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def init_database():
-    """Initialize database with all tables"""
+async def init_database(close_pool_after: bool = True):
+    """
+    Initialize database with all tables
+    
+    Args:
+        close_pool_after: If True, close the connection pool after initialization.
+                         Set to False when called from main.py (which manages the pool lifecycle).
+    """
     pool = await get_pool()
     
     try:
@@ -124,9 +130,10 @@ async def init_database():
         logger.error(f"Error initializing database: {e}")
         raise
     finally:
-        await close_pool()
+        if close_pool_after:
+            await close_pool()
 
 
 if __name__ == "__main__":
-    asyncio.run(init_database())
+    asyncio.run(init_database(close_pool_after=True))
 

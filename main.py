@@ -84,11 +84,16 @@ async def lifespan(app: FastAPI):
                 )
             """)
             if not table_exists:
-                logger.warning("Database tables not found. Please run 'python init_db.py' to initialize the database.")
+                logger.warning("Database tables not found. Auto-initializing database...")
+                # Import and run initialization
+                from init_db import init_database
+                await init_database(close_pool_after=False)
+                logger.info("✅ Database auto-initialized successfully!")
             else:
                 logger.info("Database ready")
     except Exception as e:
-        logger.warning(f"Database check failed: {e}")
+        logger.error(f"Database initialization failed: {e}")
+        raise
     
     # Initialize Telegram bot
     try:
@@ -114,6 +119,16 @@ async def lifespan(app: FastAPI):
         # Initialize bot - this will validate the token with Telegram
         await telegram_app.initialize()
         logger.info("Telegram bot initialized successfully")
+        
+        # Set webhook if WEBHOOK_URL is configured
+        if settings.webhook_url:
+            try:
+                await telegram_app.bot.set_webhook(settings.webhook_url)
+                logger.info(f"✅ Webhook set to: {settings.webhook_url}")
+            except Exception as e:
+                logger.warning(f"Failed to set webhook: {e}. You can set it manually using the Telegram API.")
+        else:
+            logger.info("WEBHOOK_URL not set. Webhook will need to be set manually.")
     except ValueError as e:
         logger.error(f"Configuration error: {e}")
         raise
