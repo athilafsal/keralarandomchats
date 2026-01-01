@@ -20,6 +20,8 @@ from bot.handlers.commands import (
 from bot.handlers.onboarding import handle_start
 from bot.handlers.chat import handle_message
 from bot.handlers.admin import handle_admin
+from bot.handlers.callbacks import handle_callback_query
+from telegram.ext import CallbackQueryHandler
 from config.constants import MESSAGE_RETENTION_DAYS
 
 # Configure logging
@@ -111,7 +113,10 @@ async def lifespan(app: FastAPI):
         logger.info("Initializing Telegram bot...")
         telegram_app = Application.builder().token(settings.bot_token).build()
         
-        # Register handlers
+        # Register handlers (callback queries first for button clicks)
+        telegram_app.add_handler(CallbackQueryHandler(handle_callback_query))
+        
+        # Command handlers
         telegram_app.add_handler(CommandHandler("start", handle_start))
         telegram_app.add_handler(CommandHandler("next", handle_next))
         telegram_app.add_handler(CommandHandler("stop", handle_stop))

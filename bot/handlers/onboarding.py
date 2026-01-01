@@ -9,6 +9,7 @@ from bot.database.connection import execute_query, fetch_query
 from bot.services.referrals import process_referral
 from bot.services.redis_client import get_redis
 from bot.utils.validators import validate_display_name, validate_age_range
+from bot.utils.keyboards import get_gender_keyboard, get_skip_keyboard, get_main_menu_keyboard
 from config.constants import (
     GENDER_UNKNOWN, GENDER_MALE, GENDER_FEMALE, GENDER_OTHER, GENDER_PREFER_NOT_SAY,
     LANGUAGE_MALAYALAM, LANGUAGE_ENGLISH, LANGUAGE_HINDI, LANGUAGE_ANY,
@@ -119,13 +120,14 @@ async def start_onboarding(update: Update, context: ContextTypes.DEFAULT_TYPE, r
     await set_onboarding_state(user_id, state)
     
     welcome_text = (
-        "👋 Welcome to Anonymous Chat!\n\n"
+        "👋 Welcome to Kerala Random Chats!\n\n"
         "This is an anonymous chat service. You'll be paired with random users for one-on-one conversations.\n\n"
-        "📋 Privacy Policy: We respect your privacy. All chats are anonymous. Use /policy to view our privacy policy.\n\n"
-        "Let's get you started! What would you like to be called? (You can skip by typing /skip - max 32 characters)"
+        "📋 Privacy: All chats are anonymous. Your identity is protected.\n\n"
+        "Let's get you started! What would you like to be called?\n"
+        "(Max 32 characters, or tap Skip)"
     )
     
-    await update.message.reply_text(welcome_text)
+    await update.message.reply_text(welcome_text, reply_markup=get_skip_keyboard())
 
 
 async def handle_onboarding_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -159,12 +161,8 @@ async def handle_onboarding_message(update: Update, context: ContextTypes.DEFAUL
         await set_onboarding_state(user_id, state)
         
         await update.message.reply_text(
-            "What is your gender?\n\n"
-            "1. Male\n"
-            "2. Female\n"
-            "3. Other\n"
-            "4. Prefer not to say\n\n"
-            "Reply with the number (1-4):"
+            "👤 What is your gender?",
+            reply_markup=get_gender_keyboard()
         )
         return
     
@@ -258,15 +256,11 @@ async def complete_onboarding(update: Update, context: ContextTypes.DEFAULT_TYPE
         redis_client = await get_redis()
         await redis_client.setex(f"user_state:{user_id}", 300, "idle")
         
+        from bot.utils.keyboards import get_main_menu_keyboard
         await update.message.reply_text(
             "✅ Registration complete!\n\n"
-            "Use /next to find a chat partner.\n"
-            "Other commands:\n"
-            "/stop - End current chat\n"
-            "/report - Report a user\n"
-            "/block - Block a user\n"
-            "/invite - Get your referral link\n"
-            "/language - Change language preference"
+            "You're all set! Tap the button below to start chatting:",
+            reply_markup=get_main_menu_keyboard()
         )
         
         logger.info(f"User {user_id} completed onboarding")

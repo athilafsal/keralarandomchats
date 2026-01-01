@@ -9,6 +9,7 @@ from bot.services.redis_client import get_redis
 from bot.services.referrals import generate_referral_link, get_referral_count, get_unlocked_features
 from bot.services.rate_limiter import check_rate_limit
 from bot.handlers.onboarding import get_onboarding_state, handle_onboarding_message
+from bot.utils.keyboards import get_main_menu_keyboard, get_chat_actions_keyboard, get_waiting_keyboard
 from config.constants import (
     USER_STATE_WAITING, USER_STATE_CHATTING, USER_STATE_IDLE, GENDER_UNKNOWN,
     LANGUAGE_ANY, REPORT_CONVERSATION_EXCERPT_SIZE

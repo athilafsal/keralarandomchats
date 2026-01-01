@@ -10,6 +10,7 @@ from bot.services.admin_service import (
 )
 from bot.services.matchmaking import end_pair, get_user_pair
 from bot.utils.security import verify_admin_secret
+from bot.utils.keyboards import get_admin_keyboard
 from config.settings import settings
 import logging
 
@@ -25,17 +26,21 @@ async def handle_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     
     if not context.args or len(context.args) == 0:
-        await update.message.reply_text(
-            "Admin commands:\n\n"
-            "/admin <secret> - Authenticate as admin\n"
-            "/admin list_online - List online users and stats\n"
-            "/admin view_pair <user_id> - View user's pair info\n"
-            "/admin force_pair <user_a> <user_b> - Force pair two users\n"
-            "/admin disconnect <user_id> - Disconnect user from chat\n"
-            "/admin ban <user_id> - Ban a user\n"
-            "/admin unban <user_id> - Unban a user\n"
-            "/admin stats - Get statistics"
-        )
+        # Check if already admin
+        if await check_admin_access(user_id):
+            await update.message.reply_text(
+                "🔐 Admin Panel\n\n"
+                "Select an option:",
+                reply_markup=get_admin_keyboard()
+            )
+        else:
+            await update.message.reply_text(
+                "🔐 Admin Panel\n\n"
+                "To access admin features, use:\n"
+                "`/admin <your_secret>`\n\n"
+                "Or use the buttons below if already authenticated:",
+                reply_markup=get_admin_keyboard()
+            )
         return
     
     command = context.args[0]
