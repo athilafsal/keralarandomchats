@@ -97,11 +97,14 @@ async def get_online_stats() -> Dict:
         
         # Get queue sizes
         queue_sizes = {}
-        for gender in [GENDER_UNKNOWN, 1, 2, 3]:
-            for lang in ['any', 'malayalam', 'english', 'hindi']:
-                size = await get_queue_size(gender, lang)
-                if size > 0:
-                    queue_sizes[f"gender_{gender}_lang_{lang}"] = size
+        try:
+            for gender in [GENDER_UNKNOWN, 1, 2, 3]:
+                for lang in ['any', 'malayalam', 'english', 'hindi']:
+                    size = await get_queue_size(gender, lang)
+                    if size > 0:
+                        queue_sizes[f"gender_{gender}_lang_{lang}"] = size
+        except Exception as e:
+            logger.error(f"Error getting queue sizes: {e}")
         
         # Get total active pairs
         from bot.database.connection import fetch_query

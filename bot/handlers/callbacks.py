@@ -103,6 +103,50 @@ async def handle_gender_callback(query, context, data):
         await query.edit_message_text("❌ Invalid selection. Please try again.")
         return
     
+    # Check if this is for partner preference
+    from bot.services.redis_client import get_redis
+    redis_client = await get_redis()
+    is_partner_pref = await redis_client.get(f"editing_partner_pref:{user_id}")
+    
+    if is_partner_pref:
+        # Update partner preference
+        await redis_client.delete(f"editing_partner_pref:{user_id}")
+        await execute_query(
+            "UPDATE users SET gender_preference = $1 WHERE id = $2",
+            gender, user_id
+        )
+        # Get updated settings keyboard
+        user_data = await fetch_query("SELECT unlocked_features FROM users WHERE id = $1", user_id)
+        has_partner_pref = False
+        if user_data:
+            unlocked = user_data.get('unlocked_features') or {}
+            if isinstance(unlocked, str):
+                import json
+                unlocked = json.loads(unlocked) if unlocked else {}
+            has_partner_pref = unlocked.get('partner_preference', False)
+        await query.edit_message_text(
+            f"✅ Partner preference updated to {GENDER_MAP.get(gender, 'Unknown')}!\n\n"
+            "Choose an option:",
+            reply_markup=get_settings_keyboard(has_partner_preference=has_partner_pref)
+        )
+        return
+    
+    # Check if this is for profile editing
+    is_profile_edit = await redis_client.get(f"editing_profile_gender:{user_id}")
+    if is_profile_edit:
+        await redis_client.delete(f"editing_profile_gender:{user_id}")
+        await execute_query(
+            "UPDATE users SET gender = $1 WHERE id = $2",
+            gender, user_id
+        )
+        await query.edit_message_text(
+            f"✅ Gender updated to {GENDER_MAP.get(gender, 'Unknown')}!\n\n"
+            "Choose an option:",
+            reply_markup=get_settings_keyboard(has_partner_preference=False)
+        )
+        return
+    
+    # Otherwise, it's onboarding
     state = await get_onboarding_state(user_id)
     if not state:
         await query.edit_message_text("❌ Onboarding session expired. Please use /start again.")
@@ -173,6 +217,33 @@ async def handle_age_callback(query, context, data):
     """Handle age range selection callback"""
     user_id = query.from_user.id
     
+    # Check if this is for profile editing
+    from bot.services.redis_client import get_redis
+    redis_client = await get_redis()
+    is_profile_edit = await redis_client.get(f"editing_profile_age:{user_id}")
+    
+    if is_profile_edit:
+        await redis_client.delete(f"editing_profile_age:{user_id}")
+        
+        if data == "age_any":
+            age_range = None
+        else:
+            age_range = data.replace("age_", "")
+        
+        await execute_query(
+            "UPDATE users SET age_range = $1 WHERE id = $2",
+            age_range, user_id
+        )
+        
+        age_text = age_range if age_range else "Any"
+        await query.edit_message_text(
+            f"✅ Age range updated to: {age_text}!\n\n"
+            "Choose an option:",
+            reply_markup=get_settings_keyboard(has_partner_preference=False)
+        )
+        return
+    
+    # Otherwise, it's onboarding
     state = await get_onboarding_state(user_id)
     if not state:
         await query.edit_message_text("❌ Onboarding session expired. Please use /start again.")
@@ -432,12 +503,13 @@ async def handle_admin_callback(query, context, data):
     """Handle admin panel callbacks"""
     user_id = query.from_user.id
     
-    if not await check_admin_access(user_id):
-        await query.answer("Admin access required.", show_alert=True)
-        return
-    
-    # Handle different admin actions
-    if data == "admin_list_online":
+    try:
+        if not await check_admin_access(user_id):
+            await query.answer("Admin access required.", show_alert=True)
+            return
+        
+        # Handle different admin actions
+        if data == "admin_list_online":
         from bot.services.admin_service import get_online_stats
         stats = await get_online_stats()
         
