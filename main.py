@@ -92,6 +92,10 @@ async def lifespan(app: FastAPI):
     
     # Initialize Telegram bot
     try:
+        if not settings.bot_token:
+            raise ValueError("BOT_TOKEN is not set. Please configure it in Railway environment variables.")
+        
+        logger.info("Initializing Telegram bot...")
         telegram_app = Application.builder().token(settings.bot_token).build()
         
         # Register handlers
@@ -107,11 +111,31 @@ async def lifespan(app: FastAPI):
         telegram_app.add_handler(CommandHandler("admin", handle_admin))
         telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
-        # Initialize bot
+        # Initialize bot - this will validate the token with Telegram
         await telegram_app.initialize()
-        logger.info("Telegram bot initialized")
+        logger.info("Telegram bot initialized successfully")
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        raise
     except Exception as e:
-        logger.error(f"Failed to initialize Telegram bot: {e}")
+        error_msg = str(e)
+        if "InvalidToken" in error_msg or "Unauthorized" in error_msg:
+            logger.error(
+                f"❌ Invalid or rejected bot token. "
+                f"This usually means:\n"
+                f"  1. The token is incorrect or has a typo\n"
+                f"  2. The token was exposed publicly and Telegram revoked it\n"
+                f"  3. The token was revoked in @BotFather\n\n"
+                f"Solution: Get a NEW token from @BotFather:\n"
+                f"  1. Go to https://t.me/BotFather\n"
+                f"  2. Send /newbot or /token\n"
+                f"  3. Copy the NEW token\n"
+                f"  4. Update BOT_TOKEN in Railway environment variables\n"
+                f"  5. Redeploy the service\n\n"
+                f"Original error: {error_msg}"
+            )
+        else:
+            logger.error(f"Failed to initialize Telegram bot: {error_msg}")
         raise
     
     # Start background task for cleanup

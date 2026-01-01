@@ -17,9 +17,15 @@
    - Add Redis (provides `REDIS_URL`)
 
 4. **Configure Environment Variables:**
-   - `BOT_TOKEN` - Your Telegram bot token
-   - `ADMIN_SECRET` - Strong secret for admin access
-   - `WEBHOOK_URL` - Set after deployment (e.g., `https://your-app.up.railway.app`)
+   - Go to your service → "Variables" tab
+   - Add these variables:
+     - **`BOT_TOKEN`** - Get this from [@BotFather](https://t.me/BotFather) on Telegram:
+       1. Send `/newbot` to @BotFather
+       2. Follow the prompts to create your bot
+       3. Copy the token (format: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
+     - **`ADMIN_SECRET`** - Create a strong password (use a password generator, at least 16 characters)
+     - **`WEBHOOK_URL`** - Leave empty for now, will set after deployment
+   - **Important:** Never share these values publicly!
 
 5. **Initialize Database:**
    ```bash
@@ -47,8 +53,47 @@
 
 ## Troubleshooting
 
+### Common Errors
+
+#### ❌ `telegram.error.InvalidToken: The token was rejected by the server`
+
+**Cause:** The bot token is invalid, incorrect, or has been revoked by Telegram.
+
+**Solutions:**
+1. **Get a NEW token from @BotFather:**
+   - Go to [@BotFather](https://t.me/BotFather) on Telegram
+   - Send `/token` to see your existing bots
+   - Select your bot and choose "Revoke current token" → "Generate new token"
+   - OR create a new bot with `/newbot`
+   - Copy the NEW token (format: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
+
+2. **Update Railway environment variable:**
+   - Go to Railway dashboard → Your service → Variables tab
+   - Find `BOT_TOKEN`
+   - Click "Edit" and paste the NEW token
+   - Make sure there are NO extra spaces before/after the token
+   - Click "Save"
+
+3. **Redeploy:**
+   - Railway will automatically redeploy when you save the variable
+   - OR manually trigger a redeploy from the Deployments tab
+
+4. **Verify the token format:**
+   - Should be: `{numbers}:{letters_numbers_hyphens}`
+   - Example: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`
+   - No spaces, no quotes, no special characters except `:` and alphanumeric
+
+**Why this happens:**
+- Token was copied incorrectly (typos, extra spaces)
+- Token was exposed publicly (in logs, GitHub, etc.) and Telegram revoked it
+- Token was manually revoked in @BotFather
+- Token format is invalid
+
+#### Other Issues
+
 - **Bot not responding:** Check Railway logs and webhook URL
 - **Database errors:** Ensure `init_db.py` was run
 - **Redis errors:** Check Redis addon is attached and `REDIS_URL` is set
 - **Webhook errors:** Verify the webhook URL is accessible (HTTPS required)
+- **Application crashes on startup:** Check Railway logs for detailed error messages
 
