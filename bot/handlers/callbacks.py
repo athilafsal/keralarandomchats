@@ -510,8 +510,8 @@ async def handle_admin_callback(query, context, data):
         
         # Handle different admin actions
         if data == "admin_list_online":
-        from bot.services.admin_service import get_online_stats
-        stats = await get_online_stats()
+            from bot.services.admin_service import get_online_stats
+            stats = await get_online_stats()
         
         message = "📊 Online Statistics:\n\n"
         message += f"⏳ Waiting users: {stats.get('waiting_users', 0)}\n"
