@@ -86,13 +86,21 @@ async def lifespan(app: FastAPI):
             if not table_exists:
                 logger.warning("Database tables not found. Auto-initializing database...")
                 # Import and run initialization
-                from init_db import init_database
-                await init_database(close_pool_after=False)
-                logger.info("✅ Database auto-initialized successfully!")
+                try:
+                    from init_db import init_database
+                    await init_database(close_pool_after=False)
+                    logger.info("✅ Database auto-initialized successfully!")
+                except ImportError as ie:
+                    logger.error(f"Failed to import init_database: {ie}")
+                    raise
+                except Exception as init_error:
+                    logger.error(f"Database initialization error: {init_error}")
+                    raise
             else:
-                logger.info("Database ready")
+                logger.info("Database ready - all tables exist")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
+        logger.error("Please ensure DATABASE_URL is set and PostgreSQL is running.")
         raise
     
     # Initialize Telegram bot
