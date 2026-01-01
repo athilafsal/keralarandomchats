@@ -5,7 +5,10 @@ import json
 from datetime import datetime
 from typing import Optional
 from bot.database.connection import execute_query, fetch_query
-from config.constants import REFERRAL_PAYLOAD_PREFIX, REFERRAL_UNLOCK_THRESHOLD
+from config.constants import (
+    REFERRAL_PAYLOAD_PREFIX, REFERRAL_UNLOCK_THRESHOLD,
+    PARTNER_PREFERENCE_UNLOCK_THRESHOLD
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -56,24 +59,46 @@ async def process_referral(referrer_id: int, referree_id: int) -> bool:
             referrer_id
         )
         
-        # Check if unlock threshold reached
+        # Check if unlock thresholds reached
         user_data = await fetch_query(
-            "SELECT referrals_count FROM users WHERE id = $1",
+            "SELECT referrals_count, unlocked_features FROM users WHERE id = $1",
             referrer_id
         )
         
-        if user_data and user_data['referrals_count'] >= REFERRAL_UNLOCK_THRESHOLD:
-            # Unlock features
-            unlocked = {"see_gender": True, "search_by_age": True}
-            await execute_query(
-                """
-                UPDATE users
-                SET unlocked_features = $1::jsonb
-                WHERE id = $2
-                """,
-                json.dumps(unlocked), referrer_id
-            )
-            logger.info(f"Unlocked features for user {referrer_id}")
+        if user_data:
+            referrals_count = user_data['referrals_count'] or 0
+            current_unlocked = user_data.get('unlocked_features') or {}
+            if isinstance(current_unlocked, str):
+                import json
+                current_unlocked = json.loads(current_unlocked) if current_unlocked else {}
+            
+            unlocked = dict(current_unlocked)
+            updated = False
+            
+            # Unlock partner preference at 3 referrals
+            if referrals_count >= PARTNER_PREFERENCE_UNLOCK_THRESHOLD:
+                if not unlocked.get('partner_preference', False):
+                    unlocked['partner_preference'] = True
+                    updated = True
+                    logger.info(f"Unlocked partner preference for user {referrer_id}")
+            
+            # Unlock other features at 5 referrals
+            if referrals_count >= REFERRAL_UNLOCK_THRESHOLD:
+                if not unlocked.get('see_gender', False):
+                    unlocked['see_gender'] = True
+                    unlocked['search_by_age'] = True
+                    updated = True
+                    logger.info(f"Unlocked premium features for user {referrer_id}")
+            
+            if updated:
+                await execute_query(
+                    """
+                    UPDATE users
+                    SET unlocked_features = $1::jsonb
+                    WHERE id = $2
+                    """,
+                    json.dumps(unlocked), referrer_id
+                )
         
         logger.info(f"Processed referral: {referrer_id} -> {referree_id}")
         return True

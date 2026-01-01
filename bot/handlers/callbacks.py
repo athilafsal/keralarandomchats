@@ -7,15 +7,16 @@ from bot.database.connection import fetch_query, execute_query
 from bot.services.matchmaking import add_to_queue, try_match, remove_from_queue, get_user_pair, end_pair, create_pair
 from bot.services.admin_service import check_admin_access
 from bot.handlers.onboarding import get_onboarding_state, set_onboarding_state, complete_onboarding, clear_onboarding_state
+from bot.handlers.callbacks_profile import handle_profile_edit, handle_partner_preference, handle_profile_edit_field
 from bot.utils.keyboards import (
     get_gender_keyboard, get_language_keyboard, get_age_range_keyboard,
     get_main_menu_keyboard, get_chat_actions_keyboard, get_waiting_keyboard,
     get_admin_keyboard, get_settings_keyboard, get_skip_keyboard
 )
 from config.constants import (
-    GENDER_MALE, GENDER_FEMALE, GENDER_OTHER, GENDER_PREFER_NOT_SAY,
+    GENDER_UNKNOWN, GENDER_MALE, GENDER_FEMALE, GENDER_OTHER, GENDER_PREFER_NOT_SAY,
     LANGUAGE_MALAYALAM, LANGUAGE_ENGLISH, LANGUAGE_HINDI, LANGUAGE_ANY,
-    USER_STATE_WAITING
+    USER_STATE_WAITING, GENDER_MAP
 )
 import logging
 
@@ -80,6 +81,8 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await handle_invite_callback(query, context)
     elif data == "help":
         await handle_help(query, context)
+    elif data.startswith("profile_edit_"):
+        await handle_profile_edit_field(query, context, data)
     
     else:
         await query.edit_message_text("❌ Unknown action. Please try again.")
@@ -552,10 +555,25 @@ async def handle_admin_callback(query, context, data):
 
 async def handle_settings(query, context):
     """Handle settings menu"""
+    user_id = query.from_user.id
+    
+    # Check if user has partner preference unlocked
+    user_data = await fetch_query(
+        "SELECT unlocked_features FROM users WHERE id = $1",
+        user_id
+    )
+    has_partner_preference = False
+    if user_data:
+        unlocked = user_data.get('unlocked_features') or {}
+        if isinstance(unlocked, str):
+            import json
+            unlocked = json.loads(unlocked) if unlocked else {}
+        has_partner_preference = unlocked.get('partner_preference', False)
+    
     await query.edit_message_text(
         "⚙️ Settings\n\n"
         "Choose an option:",
-        reply_markup=get_settings_keyboard()
+        reply_markup=get_settings_keyboard(has_partner_preference=has_partner_preference)
     )
 
 
@@ -569,10 +587,9 @@ async def handle_settings_callback(query, context, data):
             reply_markup=get_language_keyboard()
         )
     elif data == "settings_profile":
-        await query.edit_message_text(
-            "👤 Profile settings coming soon!",
-            reply_markup=get_settings_keyboard()
-        )
+        await handle_profile_edit(query, context)
+    elif data == "settings_partner_preference":
+        await handle_partner_preference(query, context)
 
 
 async def handle_my_stats(query, context):

@@ -34,7 +34,7 @@ async def get_user_stats(user_id: int) -> Dict:
             """,
             user_id
         )
-        total_chats = pairs_data['count'] if pairs_data else 0
+        total_chats = pairs_data['count'] if pairs_data and 'count' in pairs_data else 0
         
         # Count active pairs
         active_pairs_data = await fetch_query(
@@ -45,7 +45,7 @@ async def get_user_stats(user_id: int) -> Dict:
             """,
             user_id
         )
-        active_chats = active_pairs_data['count'] if active_pairs_data else 0
+        active_chats = active_pairs_data['count'] if active_pairs_data and 'count' in active_pairs_data else 0
         
         # Count messages sent
         messages_data = await fetch_query(
@@ -56,16 +56,26 @@ async def get_user_stats(user_id: int) -> Dict:
             """,
             user_id
         )
-        messages_sent = messages_data['count'] if messages_data else 0
+        messages_sent = messages_data['count'] if messages_data and 'count' in messages_data else 0
         
         # Get account age
         from datetime import datetime
         created_at = user_data.get('created_at')
         account_age_days = 0
         if created_at:
-            if isinstance(created_at, str):
-                created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-            account_age_days = (datetime.now(created_at.tzinfo) - created_at).days if hasattr(created_at, 'tzinfo') else (datetime.now() - created_at).days
+            try:
+                if isinstance(created_at, str):
+                    created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                elif isinstance(created_at, datetime):
+                    # Handle timezone-aware datetime
+                    now = datetime.utcnow()
+                    if hasattr(created_at, 'tzinfo') and created_at.tzinfo:
+                        from datetime import timezone
+                        now = datetime.now(timezone.utc)
+                    account_age_days = (now - created_at).days
+            except Exception as e:
+                logger.error(f"Error calculating account age: {e}")
+                account_age_days = 0
         
         # Get unlocked features
         unlocked = user_data.get('unlocked_features', {}) or {}

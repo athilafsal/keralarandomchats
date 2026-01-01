@@ -121,17 +121,24 @@ def get_admin_keyboard():
     return InlineKeyboardMarkup(keyboard)
 
 
-def get_settings_keyboard():
+def get_settings_keyboard(has_partner_preference: bool = False):
     """Get settings keyboard"""
     keyboard = [
         [
             InlineKeyboardButton("🌐 Change Language", callback_data="settings_language"),
             InlineKeyboardButton("👤 Edit Profile", callback_data="settings_profile"),
         ],
-        [
-            InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu"),
-        ]
     ]
+    
+    if has_partner_preference:
+        keyboard.append([
+            InlineKeyboardButton("💑 Partner Preference", callback_data="settings_partner_preference"),
+        ])
+    
+    keyboard.append([
+        InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu"),
+    ])
+    
     return InlineKeyboardMarkup(keyboard)
 
 

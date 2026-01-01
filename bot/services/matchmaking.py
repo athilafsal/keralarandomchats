@@ -20,13 +20,38 @@ def get_queue_key(gender: int, language: str) -> str:
     return f"{REDIS_QUEUE_PREFIX}:gender:{gender}:lang:{language}"
 
 
-async def add_to_queue(user_id: int, gender_filter: int, language_preference: str) -> bool:
+async def add_to_queue(user_id: int, gender_filter: int, language_preference: str, use_gender_preference: bool = False) -> bool:
     """
     Add user to matchmaking queue
     Returns True if added successfully
+    
+    Args:
+        user_id: User ID to add to queue
+        gender_filter: Gender filter to use (can be overridden by gender_preference)
+        language_preference: Language preference
+        use_gender_preference: If True, use user's gender_preference instead of gender_filter
     """
     try:
         redis_client = await get_redis()
+        
+        # If use_gender_preference is True, get user's gender_preference
+        if use_gender_preference:
+            from bot.database.connection import fetch_query
+            user_data = await fetch_query(
+                "SELECT gender_preference, unlocked_features FROM users WHERE id = $1",
+                user_id
+            )
+            if user_data:
+                unlocked = user_data.get('unlocked_features') or {}
+                if isinstance(unlocked, str):
+                    import json
+                    unlocked = json.loads(unlocked) if unlocked else {}
+                
+                if unlocked.get('partner_preference', False):
+                    gender_pref = user_data.get('gender_preference', 0) or 0
+                    if gender_pref > 0:  # Only use if set (not 0/any)
+                        gender_filter = gender_pref
+        
         queue_key = get_queue_key(gender_filter, language_preference)
         
         # Check if user is already in any queue

@@ -62,8 +62,16 @@ async def handle_next(update: Update, context: ContextTypes.DEFAULT_TYPE):
     gender_filter = user_data.get('gender', GENDER_UNKNOWN)
     language_preference = user_data.get('language_preference', LANGUAGE_ANY)
     
+    # Check if user has partner preference unlocked
+    unlocked = user_data.get('unlocked_features') or {}
+    if isinstance(unlocked, str):
+        import json
+        unlocked = json.loads(unlocked) if unlocked else {}
+    
+    use_gender_pref = unlocked.get('partner_preference', False)
+    
     # Add to queue
-    await add_to_queue(user_id, gender_filter, language_preference)
+    await add_to_queue(user_id, gender_filter, language_preference, use_gender_preference=use_gender_pref)
     
     # Try immediate match
     matched_id = await try_match(user_id, gender_filter, language_preference)

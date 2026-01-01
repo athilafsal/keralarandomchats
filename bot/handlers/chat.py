@@ -28,6 +28,49 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_onboarding_message(update, context)
         return
     
+    # Check for profile editing
+    from bot.services.redis_client import get_redis
+    redis_client = await get_redis()
+    
+    editing_name = await redis_client.get(f"editing_profile_name:{user_id}")
+    if editing_name:
+        await redis_client.delete(f"editing_profile_name:{user_id}")
+        
+        # Validate display name
+        from bot.utils.validators import validate_display_name
+        is_valid, error = validate_display_name(message_text)
+        if not is_valid:
+            await update.message.reply_text(f"❌ {error}\nPlease try again:")
+            await redis_client.setex(f"editing_profile_name:{user_id}", 300, "1")
+            return
+        
+        # Update display name
+        await execute_query(
+            "UPDATE users SET display_name = $1 WHERE id = $2",
+            message_text.strip(), user_id
+        )
+        
+        from bot.utils.keyboards import get_settings_keyboard
+        await update.message.reply_text(
+            f"✅ Display name updated to: {message_text.strip()}\n\n"
+            "Choose an option:",
+            reply_markup=get_settings_keyboard(has_partner_preference=False)
+        )
+        return
+    
+    editing_age = await redis_client.get(f"editing_profile_age:{user_id}")
+    if editing_age:
+        await redis_client.delete(f"editing_profile_age:{user_id}")
+        
+        # Age range is handled by callback, but handle text input too
+        if message_text.lower() == "/cancel":
+            from bot.utils.keyboards import get_settings_keyboard
+            await update.message.reply_text(
+                "❌ Cancelled.",
+                reply_markup=get_settings_keyboard(has_partner_preference=False)
+            )
+            return
+    
     # Check for pending admin actions
     from bot.services.redis_client import get_redis
     from bot.services.admin_service import check_admin_access, get_user_pair_info, force_pair_users, ban_user, unban_user, log_admin_action

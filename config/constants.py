@@ -40,6 +40,7 @@ PAIR_EXPIRATION_HOURS = 24  # Cleanup pairs older than 24h
 
 # Referral system
 REFERRAL_UNLOCK_THRESHOLD = 5  # Number of referrals needed to unlock features
+PARTNER_PREFERENCE_UNLOCK_THRESHOLD = 3  # Number of referrals needed to unlock partner preference
 REFERRAL_PAYLOAD_PREFIX = "ref_"
 ADMIN_PAYLOAD_PREFIX = "admin_"
 

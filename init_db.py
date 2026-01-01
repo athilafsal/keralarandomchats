@@ -38,6 +38,7 @@ async def init_database(close_pool_after: bool = True):
                     username TEXT,
                     display_name TEXT,
                     gender SMALLINT DEFAULT 0,
+                    gender_preference SMALLINT DEFAULT 0,
                     language_preference TEXT DEFAULT 'any',
                     age_range TEXT,
                     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -52,6 +53,12 @@ async def init_database(close_pool_after: bool = True):
                 )
             """)
             logger.info("Created users table")
+            
+            # Add gender_preference column if it doesn't exist (for existing databases)
+            await conn.execute("""
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS gender_preference SMALLINT DEFAULT 0
+            """)
+            logger.info("Added gender_preference column if needed")
             
             # Create pairs table
             await conn.execute("""

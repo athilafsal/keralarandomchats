@@ -53,7 +53,11 @@ async def handle_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if verify_admin_secret(secret):
             await grant_admin_access(user_id)
             await log_admin_action(user_id, "admin_login", {})
-            await update.message.reply_text("✅ Admin access granted. Session expires in 2 hours.")
+            await update.message.reply_text(
+                "✅ Admin access granted. Session expires in 2 hours.\n\n"
+                "Select an option:",
+                reply_markup=get_admin_keyboard()
+            )
         else:
             await update.message.reply_text("❌ Invalid admin secret.")
         return
