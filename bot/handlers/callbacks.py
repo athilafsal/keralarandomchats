@@ -521,9 +521,18 @@ async def handle_admin_callback(query, context, data):
     """Handle admin panel callbacks"""
     user_id = query.from_user.id
     
+    logger.info(f"Admin callback received: {data} from user {user_id}")
+    
     try:
-        if not await check_admin_access(user_id):
-            await query.answer("Admin access required.", show_alert=True)
+        admin_has_access = await check_admin_access(user_id)
+        logger.info(f"Admin access check for user {user_id}: {admin_has_access}")
+        
+        if not admin_has_access:
+            logger.warning(f"User {user_id} tried to access admin without permission")
+            try:
+                await query.answer("Admin access required.", show_alert=True)
+            except Exception as e:
+                logger.error(f"Error answering admin callback: {e}")
             return
         
         # Handle different admin actions
