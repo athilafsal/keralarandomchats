@@ -32,10 +32,32 @@
    railway run python init_db.py
    ```
 
-6. **Set Webhook:**
+6. **Get Your Railway Domain & Set Webhook:**
+   
+   **Find your Railway domain:**
+   - Go to Railway dashboard → Your service → **Settings** tab
+   - Scroll to **"Networking"** section
+   - Copy your domain (e.g., `your-app-name.up.railway.app`)
+   
+   **Set the webhook:**
    ```bash
-   curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook?url=https://your-app.up.railway.app/webhook"
+   curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook?url=https://your-app-name.up.railway.app/webhook"
    ```
+   
+   Replace:
+   - `<BOT_TOKEN>` with your actual bot token
+   - `your-app-name.up.railway.app` with your Railway domain
+   
+   **Example:**
+   ```bash
+   curl "https://api.telegram.org/bot8356283788:AAGLDJtWcGfRWvxk_JnPWJ1SlmgbhE7a8_0/setWebhook?url=https://keralarandomchats.up.railway.app/webhook"
+   ```
+   
+   **Expected response:** `{"ok":true,"result":true,"description":"Webhook was set"}`
+   
+   **Optional:** Update `WEBHOOK_URL` in Railway Variables to match your webhook URL
+   
+   📖 **See `WEBHOOK_SETUP.md` for detailed instructions**
 
 ## Testing
 
