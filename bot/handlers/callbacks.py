@@ -537,7 +537,7 @@ async def handle_admin_callback(query, context, data):
                 )
         
         elif data == "admin_stats":
-        from bot.database.connection import fetch_query
+            from bot.database.connection import fetch_query
         
         # Get basic statistics
         total_users_row = await fetch_query("SELECT COUNT(*) as count FROM users")
