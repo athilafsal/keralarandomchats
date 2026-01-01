@@ -810,45 +810,80 @@ async def handle_invite_callback(query, context):
     """Handle invite friends button"""
     user_id = query.from_user.id
     
-    # Check if user exists
-    user_data = await fetch_query("SELECT id FROM users WHERE id = $1", user_id)
-    if not user_data:
-        await query.edit_message_text("Please start with /start to register first.")
-        return
-    
-    # Get bot username
-    bot_info = await context.bot.get_me()
-    bot_username = bot_info.username
-    
-    # Generate referral link
-    from bot.services.referrals import generate_referral_link, get_referral_count, get_unlocked_features
-    referral_link = generate_referral_link(bot_username, user_id)
-    
-    # Get referral count
-    count = await get_referral_count(user_id)
-    
-    # Get unlocked features
-    features = await get_unlocked_features(user_id)
-    has_unlocked = features.get('see_gender', False) or features.get('search_by_age', False)
-    
-    message = (
-        "🎁 Invite your friends!\n\n"
-        f"Share this link:\n`{referral_link}`\n\n"
-        f"Referrals: {count}/5\n\n"
-    )
-    
-    if has_unlocked:
-        message += "✅ You've unlocked premium features!\n\n"
-    else:
-        message += f"🔓 Unlock premium features after {5 - count} more referral(s)!\n\n"
-    
-    message += "Premium features:\n• See gender preference\n• Search by age range"
-    
-    await query.edit_message_text(
-        message,
-        reply_markup=get_main_menu_keyboard(),
-        parse_mode='Markdown'
-    )
+    try:
+        # Check if user exists
+        user_data = await fetch_query("SELECT id FROM users WHERE id = $1", user_id)
+        if not user_data:
+            try:
+                await query.edit_message_text("Please start with /start to register first.")
+            except:
+                await query.message.reply_text("Please start with /start to register first.")
+            return
+        
+        # Get bot username
+        bot_info = await context.bot.get_me()
+        bot_username = bot_info.username
+        
+        # Generate referral link
+        from bot.services.referrals import generate_referral_link, get_referral_count, get_unlocked_features
+        referral_link = generate_referral_link(bot_username, user_id)
+        
+        # Get referral count
+        count = await get_referral_count(user_id)
+        
+        # Get unlocked features
+        features = await get_unlocked_features(user_id)
+        has_unlocked = features.get('see_gender', False) or features.get('search_by_age', False)
+        has_partner_pref = features.get('partner_preference', False)
+        
+        message = (
+            "🎁 Invite your friends!\n\n"
+            f"Share this link:\n`{referral_link}`\n\n"
+            f"Referrals: {count}/5\n\n"
+        )
+        
+        if has_partner_pref:
+            message += "✅ Partner preference unlocked (3+ referrals)!\n"
+        elif count >= 3:
+            message += f"✅ Partner preference unlocked!\n"
+        else:
+            message += f"🔓 Unlock partner preference in {3 - count} more referral(s)!\n"
+        
+        if has_unlocked:
+            message += "✅ Premium features unlocked (5+ referrals)!\n\n"
+        else:
+            remaining = 5 - count
+            if remaining > 0:
+                message += f"🔓 Unlock premium features in {remaining} more referral(s)!\n\n"
+        
+        message += "Features:\n"
+        message += "• Partner preference (3 referrals)\n"
+        message += "• See gender preference (5 referrals)\n"
+        message += "• Search by age range (5 referrals)"
+        
+        try:
+            await query.edit_message_text(
+                message,
+                reply_markup=get_main_menu_keyboard(),
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            logger.error(f"Error editing invite message: {e}")
+            await query.message.reply_text(
+                message,
+                reply_markup=get_main_menu_keyboard(),
+                parse_mode='Markdown'
+            )
+    except Exception as e:
+        logger.error(f"Error in invite callback: {e}", exc_info=True)
+        try:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
+        except:
+            pass
+        try:
+            await query.message.reply_text(f"❌ Error: {str(e)}")
+        except:
+            pass
 
 
 async def handle_help(query, context):
