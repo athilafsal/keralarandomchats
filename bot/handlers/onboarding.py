@@ -82,10 +82,12 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     if existing_user:
-        # User already registered
+        # User already registered - show main menu immediately
+        from bot.utils.keyboards import get_main_menu_keyboard
         await update.message.reply_text(
-            "Welcome back! Use /next to find a chat partner.\n"
-            "Commands: /next, /stop, /report, /block, /invite"
+            "👋 Welcome back!\n\n"
+            "Choose an option:",
+            reply_markup=get_main_menu_keyboard()
         )
         return
     

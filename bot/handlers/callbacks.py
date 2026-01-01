@@ -68,8 +68,18 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await handle_admin_callback(query, context, data)
     
     # Handle settings callbacks
+    elif data == "settings":
+        await handle_settings(query, context)
     elif data.startswith("settings_"):
         await handle_settings_callback(query, context, data)
+    
+    # Handle main menu callbacks
+    elif data == "my_stats":
+        await handle_my_stats(query, context)
+    elif data == "invite":
+        await handle_invite_callback(query, context)
+    elif data == "help":
+        await handle_help(query, context)
     
     else:
         await query.edit_message_text("❌ Unknown action. Please try again.")
@@ -120,19 +130,40 @@ async def handle_language_callback(query, context, data):
         await query.edit_message_text("❌ Invalid selection. Please try again.")
         return
     
+    # Check if user is in onboarding
     state = await get_onboarding_state(user_id)
-    if not state:
-        await query.edit_message_text("❌ Onboarding session expired. Please use /start again.")
-        return
-    
-    state["language_preference"] = language
-    state["step"] = "age"
-    await set_onboarding_state(user_id, state)
-    
-    await query.edit_message_text(
-        "📅 What is your age range? (Optional)",
-        reply_markup=get_age_range_keyboard()
-    )
+    if state:
+        # Update onboarding state
+        state["language_preference"] = language
+        state["step"] = "age"
+        await set_onboarding_state(user_id, state)
+        
+        await query.edit_message_text(
+            "📅 What is your age range? (Optional)",
+            reply_markup=get_age_range_keyboard()
+        )
+    else:
+        # User is updating language from settings
+        user_data = await fetch_query("SELECT id FROM users WHERE id = $1", user_id)
+        if user_data:
+            # Update user's language preference
+            await execute_query(
+                "UPDATE users SET language_preference = $1 WHERE id = $2",
+                language, user_id
+            )
+            lang_names = {
+                LANGUAGE_MALAYALAM: "Malayalam",
+                LANGUAGE_ENGLISH: "English",
+                LANGUAGE_HINDI: "Hindi",
+                LANGUAGE_ANY: "Any"
+            }
+            await query.edit_message_text(
+                f"✅ Language preference updated to {lang_names.get(language, 'Any')}!\n\n"
+                "Choose an option:",
+                reply_markup=get_settings_keyboard()
+            )
+        else:
+            await query.edit_message_text("Please start with /start to register first.")
 
 
 async def handle_age_callback(query, context, data):
@@ -404,27 +435,114 @@ async def handle_admin_callback(query, context, data):
     
     # Handle different admin actions
     if data == "admin_list_online":
-        from bot.handlers.admin import handle_admin_list_online
-        # We need to create a mock update for this
-        # For now, just show stats
-        stats = await fetch_query("""
-            SELECT 
-                COUNT(*) as total_users,
-                COUNT(CASE WHEN last_active > NOW() - INTERVAL '5 minutes' THEN 1 END) as online_users
-            FROM users
-        """)
+        from bot.services.admin_service import get_online_stats
+        stats = await get_online_stats()
+        
+        message = "📊 Online Statistics:\n\n"
+        message += f"⏳ Waiting users: {stats.get('waiting_users', 0)}\n"
+        message += f"💬 Chatting users: {stats.get('chatting_users', 0)}\n"
+        message += f"🔗 Active pairs: {stats.get('active_pairs', 0)}\n"
+        
+        queue_sizes = stats.get('queue_sizes', {})
+        if queue_sizes:
+            message += "\n📋 Queue sizes:\n"
+            for queue, size in list(queue_sizes.items())[:5]:  # Show first 5
+                message += f"• {queue}: {size}\n"
         
         await query.edit_message_text(
-            f"📊 Online Statistics:\n\n"
-            f"👥 Total Users: {stats.get('total_users', 0) if stats else 0}\n"
-            f"🟢 Online (last 5 min): {stats.get('online_users', 0) if stats else 0}",
+            message,
             reply_markup=get_admin_keyboard()
         )
+        
     elif data == "admin_stats":
+        from bot.database.connection import fetch_query
+        
+        # Get basic statistics
+        total_users_row = await fetch_query("SELECT COUNT(*) as count FROM users")
+        total_users_count = total_users_row['count'] if total_users_row else 0
+        
+        active_pairs_row = await fetch_query("SELECT COUNT(*) as count FROM pairs WHERE is_active = true")
+        active_pairs_count = active_pairs_row['count'] if active_pairs_row else 0
+        
+        banned_users_row = await fetch_query("SELECT COUNT(*) as count FROM users WHERE is_banned = true")
+        banned_users_count = banned_users_row['count'] if banned_users_row else 0
+        
+        pending_reports_row = await fetch_query("SELECT COUNT(*) as count FROM reports WHERE status = 'pending'")
+        pending_reports_count = pending_reports_row['count'] if pending_reports_row else 0
+        
+        message = "📈 Statistics:\n\n"
+        message += f"👥 Total users: {total_users_count}\n"
+        message += f"🔗 Active pairs: {active_pairs_count}\n"
+        message += f"🚫 Banned users: {banned_users_count}\n"
+        message += f"⚠️ Pending reports: {pending_reports_count}\n"
+        
         await query.edit_message_text(
-            "📊 Statistics feature coming soon!",
+            message,
             reply_markup=get_admin_keyboard()
         )
+        
+    elif data == "admin_view_pair_menu":
+        # Store pending action in Redis
+        from bot.services.redis_client import get_redis
+        redis_client = await get_redis()
+        await redis_client.setex(f"admin_pending:{user_id}", 300, "view_pair")
+        
+        await query.edit_message_text(
+            "🔍 View Pair Info\n\n"
+            "Please send the user_id you want to view pair info for:",
+            reply_markup=get_admin_keyboard()
+        )
+        
+    elif data == "admin_force_pair_menu":
+        # Store pending action
+        from bot.services.redis_client import get_redis
+        redis_client = await get_redis()
+        await redis_client.setex(f"admin_pending:{user_id}", 300, "force_pair")
+        
+        await query.edit_message_text(
+            "🔗 Force Pair Users\n\n"
+            "Please send two user_ids separated by space:\n"
+            "Example: `123456789 987654321`",
+            reply_markup=get_admin_keyboard(),
+            parse_mode='Markdown'
+        )
+        
+    elif data == "admin_ban_menu":
+        # Store pending action
+        from bot.services.redis_client import get_redis
+        redis_client = await get_redis()
+        await redis_client.setex(f"admin_pending:{user_id}", 300, "ban")
+        
+        await query.edit_message_text(
+            "🚫 Ban User\n\n"
+            "Please send the user_id you want to ban:",
+            reply_markup=get_admin_keyboard()
+        )
+        
+    elif data == "admin_unban_menu":
+        # Store pending action
+        from bot.services.redis_client import get_redis
+        redis_client = await get_redis()
+        await redis_client.setex(f"admin_pending:{user_id}", 300, "unban")
+        
+        await query.edit_message_text(
+            "✅ Unban User\n\n"
+            "Please send the user_id you want to unban:",
+            reply_markup=get_admin_keyboard()
+        )
+        
+    elif data == "admin_disconnect_menu":
+        # Store pending action
+        from bot.services.redis_client import get_redis
+        redis_client = await get_redis()
+        await redis_client.setex(f"admin_pending:{user_id}", 300, "disconnect")
+        
+        await query.edit_message_text(
+            "🔌 Disconnect User\n\n"
+            "Please send the user_id you want to disconnect from their chat:",
+            reply_markup=get_admin_keyboard()
+        )
+        
     else:
         await query.edit_message_text(
             "Admin feature coming soon!",
@@ -432,8 +550,19 @@ async def handle_admin_callback(query, context, data):
         )
 
 
+async def handle_settings(query, context):
+    """Handle settings menu"""
+    await query.edit_message_text(
+        "⚙️ Settings\n\n"
+        "Choose an option:",
+        reply_markup=get_settings_keyboard()
+    )
+
+
 async def handle_settings_callback(query, context, data):
     """Handle settings callbacks"""
+    user_id = query.from_user.id
+    
     if data == "settings_language":
         await query.edit_message_text(
             "🌐 Select your preferred language:",
@@ -444,4 +573,126 @@ async def handle_settings_callback(query, context, data):
             "👤 Profile settings coming soon!",
             reply_markup=get_settings_keyboard()
         )
+
+
+async def handle_my_stats(query, context):
+    """Handle my stats button"""
+    user_id = query.from_user.id
+    
+    # Check if user exists
+    user_data = await fetch_query("SELECT id FROM users WHERE id = $1", user_id)
+    if not user_data:
+        await query.edit_message_text("Please start with /start to register first.")
+        return
+    
+    # Get stats
+    from bot.services.stats import get_user_stats
+    stats = await get_user_stats(user_id)
+    
+    if not stats:
+        await query.edit_message_text("❌ Error loading stats. Please try again.")
+        return
+    
+    # Format stats message
+    message = "📊 Your Statistics\n\n"
+    message += f"💬 Total Chats: {stats.get('total_chats', 0)}\n"
+    message += f"💭 Messages Sent: {stats.get('messages_sent', 0)}\n"
+    message += f"🔗 Referrals: {stats.get('referrals_count', 0)}/5\n"
+    
+    if stats.get('account_age_days', 0) > 0:
+        message += f"📅 Account Age: {stats['account_age_days']} days\n"
+    
+    if stats.get('has_unlocked_features'):
+        message += "\n✅ Premium Features Unlocked!"
+        unlocked = stats.get('unlocked_features', {})
+        if unlocked.get('see_gender'):
+            message += "\n• See gender preference"
+        if unlocked.get('search_by_age'):
+            message += "\n• Search by age range"
+    else:
+        remaining = 5 - stats.get('referrals_count', 0)
+        if remaining > 0:
+            message += f"\n🔓 Unlock premium features in {remaining} more referral(s)!"
+    
+    await query.edit_message_text(
+        message,
+        reply_markup=get_main_menu_keyboard()
+    )
+
+
+async def handle_invite_callback(query, context):
+    """Handle invite friends button"""
+    user_id = query.from_user.id
+    
+    # Check if user exists
+    user_data = await fetch_query("SELECT id FROM users WHERE id = $1", user_id)
+    if not user_data:
+        await query.edit_message_text("Please start with /start to register first.")
+        return
+    
+    # Get bot username
+    bot_info = await context.bot.get_me()
+    bot_username = bot_info.username
+    
+    # Generate referral link
+    from bot.services.referrals import generate_referral_link, get_referral_count, get_unlocked_features
+    referral_link = generate_referral_link(bot_username, user_id)
+    
+    # Get referral count
+    count = await get_referral_count(user_id)
+    
+    # Get unlocked features
+    features = await get_unlocked_features(user_id)
+    has_unlocked = features.get('see_gender', False) or features.get('search_by_age', False)
+    
+    message = (
+        "🎁 Invite your friends!\n\n"
+        f"Share this link:\n`{referral_link}`\n\n"
+        f"Referrals: {count}/5\n\n"
+    )
+    
+    if has_unlocked:
+        message += "✅ You've unlocked premium features!\n\n"
+    else:
+        message += f"🔓 Unlock premium features after {5 - count} more referral(s)!\n\n"
+    
+    message += "Premium features:\n• See gender preference\n• Search by age range"
+    
+    await query.edit_message_text(
+        message,
+        reply_markup=get_main_menu_keyboard(),
+        parse_mode='Markdown'
+    )
+
+
+async def handle_help(query, context):
+    """Handle help button"""
+    help_text = (
+        "ℹ️ Help & Commands\n\n"
+        "📋 **Main Commands:**\n"
+        "• `/start` - Start or restart the bot\n"
+        "• `/next` - Find a new chat partner\n"
+        "• `/stop` - End current chat\n"
+        "• `/report` - Report a user\n"
+        "• `/block` - Block a user\n"
+        "• `/invite` - Get your referral link\n"
+        "• `/language` - Change language preference\n"
+        "• `/policy` - View privacy policy\n\n"
+        "🎯 **How to Use:**\n"
+        "1. Tap 'Find Chat' to start searching\n"
+        "2. Wait for a match\n"
+        "3. Start chatting!\n"
+        "4. Use buttons to manage your chat\n\n"
+        "💡 **Tips:**\n"
+        "• All chats are anonymous\n"
+        "• Be respectful to others\n"
+        "• Report inappropriate behavior\n"
+        "• Invite friends to unlock premium features"
+    )
+    
+    await query.edit_message_text(
+        help_text,
+        reply_markup=get_main_menu_keyboard(),
+        parse_mode='Markdown'
+    )
 
