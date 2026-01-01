@@ -512,18 +512,18 @@ async def handle_admin_callback(query, context, data):
         if data == "admin_list_online":
             from bot.services.admin_service import get_online_stats
             stats = await get_online_stats()
-        
-        message = "📊 Online Statistics:\n\n"
-        message += f"⏳ Waiting users: {stats.get('waiting_users', 0)}\n"
-        message += f"💬 Chatting users: {stats.get('chatting_users', 0)}\n"
-        message += f"🔗 Active pairs: {stats.get('active_pairs', 0)}\n"
-        
-        queue_sizes = stats.get('queue_sizes', {})
-        if queue_sizes:
-            message += "\n📋 Queue sizes:\n"
-            for queue, size in list(queue_sizes.items())[:5]:  # Show first 5
-                message += f"• {queue}: {size}\n"
-        
+            
+            message = "📊 Online Statistics:\n\n"
+            message += f"⏳ Waiting users: {stats.get('waiting_users', 0)}\n"
+            message += f"💬 Chatting users: {stats.get('chatting_users', 0)}\n"
+            message += f"🔗 Active pairs: {stats.get('active_pairs', 0)}\n"
+            
+            queue_sizes = stats.get('queue_sizes', {})
+            if queue_sizes:
+                message += "\n📋 Queue sizes:\n"
+                for queue, size in list(queue_sizes.items())[:5]:  # Show first 5
+                    message += f"• {queue}: {size}\n"
+            
             try:
                 await query.edit_message_text(
                     message,
@@ -538,26 +538,26 @@ async def handle_admin_callback(query, context, data):
         
         elif data == "admin_stats":
             from bot.database.connection import fetch_query
-        
-        # Get basic statistics
-        total_users_row = await fetch_query("SELECT COUNT(*) as count FROM users")
-        total_users_count = total_users_row['count'] if total_users_row else 0
-        
-        active_pairs_row = await fetch_query("SELECT COUNT(*) as count FROM pairs WHERE is_active = true")
-        active_pairs_count = active_pairs_row['count'] if active_pairs_row else 0
-        
-        banned_users_row = await fetch_query("SELECT COUNT(*) as count FROM users WHERE is_banned = true")
-        banned_users_count = banned_users_row['count'] if banned_users_row else 0
-        
-        pending_reports_row = await fetch_query("SELECT COUNT(*) as count FROM reports WHERE status = 'pending'")
-        pending_reports_count = pending_reports_row['count'] if pending_reports_row else 0
-        
-        message = "📈 Statistics:\n\n"
-        message += f"👥 Total users: {total_users_count}\n"
-        message += f"🔗 Active pairs: {active_pairs_count}\n"
-        message += f"🚫 Banned users: {banned_users_count}\n"
-        message += f"⚠️ Pending reports: {pending_reports_count}\n"
-        
+            
+            # Get basic statistics
+            total_users_row = await fetch_query("SELECT COUNT(*) as count FROM users")
+            total_users_count = total_users_row['count'] if total_users_row else 0
+            
+            active_pairs_row = await fetch_query("SELECT COUNT(*) as count FROM pairs WHERE is_active = true")
+            active_pairs_count = active_pairs_row['count'] if active_pairs_row else 0
+            
+            banned_users_row = await fetch_query("SELECT COUNT(*) as count FROM users WHERE is_banned = true")
+            banned_users_count = banned_users_row['count'] if banned_users_row else 0
+            
+            pending_reports_row = await fetch_query("SELECT COUNT(*) as count FROM reports WHERE status = 'pending'")
+            pending_reports_count = pending_reports_row['count'] if pending_reports_row else 0
+            
+            message = "📈 Statistics:\n\n"
+            message += f"👥 Total users: {total_users_count}\n"
+            message += f"🔗 Active pairs: {active_pairs_count}\n"
+            message += f"🚫 Banned users: {banned_users_count}\n"
+            message += f"⚠️ Pending reports: {pending_reports_count}\n"
+            
             try:
                 await query.edit_message_text(
                     message,
@@ -571,11 +571,11 @@ async def handle_admin_callback(query, context, data):
                 )
         
         elif data == "admin_view_pair_menu":
-        # Store pending action in Redis
-        from bot.services.redis_client import get_redis
-        redis_client = await get_redis()
-        await redis_client.setex(f"admin_pending:{user_id}", 300, "view_pair")
-        
+            # Store pending action in Redis
+            from bot.services.redis_client import get_redis
+            redis_client = await get_redis()
+            await redis_client.setex(f"admin_pending:{user_id}", 300, "view_pair")
+            
             try:
                 await query.edit_message_text(
                     "🔍 View Pair Info\n\n"
@@ -591,11 +591,11 @@ async def handle_admin_callback(query, context, data):
                 )
         
         elif data == "admin_force_pair_menu":
-        # Store pending action
-        from bot.services.redis_client import get_redis
-        redis_client = await get_redis()
-        await redis_client.setex(f"admin_pending:{user_id}", 300, "force_pair")
-        
+            # Store pending action
+            from bot.services.redis_client import get_redis
+            redis_client = await get_redis()
+            await redis_client.setex(f"admin_pending:{user_id}", 300, "force_pair")
+            
             try:
                 await query.edit_message_text(
                     "🔗 Force Pair Users\n\n"
@@ -615,11 +615,11 @@ async def handle_admin_callback(query, context, data):
                 )
         
         elif data == "admin_ban_menu":
-        # Store pending action
-        from bot.services.redis_client import get_redis
-        redis_client = await get_redis()
-        await redis_client.setex(f"admin_pending:{user_id}", 300, "ban")
-        
+            # Store pending action
+            from bot.services.redis_client import get_redis
+            redis_client = await get_redis()
+            await redis_client.setex(f"admin_pending:{user_id}", 300, "ban")
+            
             try:
                 await query.edit_message_text(
                     "🚫 Ban User\n\n"
@@ -635,11 +635,11 @@ async def handle_admin_callback(query, context, data):
                 )
         
         elif data == "admin_unban_menu":
-        # Store pending action
-        from bot.services.redis_client import get_redis
-        redis_client = await get_redis()
-        await redis_client.setex(f"admin_pending:{user_id}", 300, "unban")
-        
+            # Store pending action
+            from bot.services.redis_client import get_redis
+            redis_client = await get_redis()
+            await redis_client.setex(f"admin_pending:{user_id}", 300, "unban")
+            
             try:
                 await query.edit_message_text(
                     "✅ Unban User\n\n"
@@ -655,11 +655,11 @@ async def handle_admin_callback(query, context, data):
                 )
         
         elif data == "admin_disconnect_menu":
-        # Store pending action
-        from bot.services.redis_client import get_redis
-        redis_client = await get_redis()
-        await redis_client.setex(f"admin_pending:{user_id}", 300, "disconnect")
-        
+            # Store pending action
+            from bot.services.redis_client import get_redis
+            redis_client = await get_redis()
+            await redis_client.setex(f"admin_pending:{user_id}", 300, "disconnect")
+            
             try:
                 await query.edit_message_text(
                     "🔌 Disconnect User\n\n"
