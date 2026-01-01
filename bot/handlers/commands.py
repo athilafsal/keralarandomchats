@@ -47,8 +47,11 @@ async def handle_next(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if already in a chat
     pair_id = await get_user_pair(user_id)
     if pair_id:
+        from bot.utils.keyboards import get_chat_actions_keyboard
         await update.message.reply_text(
-            "You're already in a chat! Use /stop to end the current chat first."
+            "💬 You're already in a chat!\n\n"
+            "Use the buttons below to manage it:",
+            reply_markup=get_chat_actions_keyboard()
         )
         return
     
@@ -73,9 +76,11 @@ async def handle_next(update: Update, context: ContextTypes.DEFAULT_TYPE):
             matched_user = await fetch_query("SELECT display_name FROM users WHERE id = $1", matched_id)
             matched_name = matched_user.get('display_name') if matched_user and matched_user.get('display_name') else "Anonymous"
             
+            from bot.utils.keyboards import get_chat_actions_keyboard
             await update.message.reply_text(
                 f"✅ You've been paired! You're now chatting with {matched_name}.\n\n"
-                "Type /stop to end the chat."
+                "Start chatting! Use the buttons below to manage your chat:",
+                reply_markup=get_chat_actions_keyboard()
             )
             
             # Notify the matched user
@@ -92,9 +97,11 @@ async def handle_next(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("❌ Error creating pair. Please try /next again.")
     else:
+        from bot.utils.keyboards import get_waiting_keyboard
         await update.message.reply_text(
-            "🔍 Looking for a chat partner... You'll be notified when someone is available.\n\n"
-            "Type /stop to cancel."
+            "🔍 Searching for a chat partner...\n\n"
+            "Please wait while we find someone for you to chat with.",
+            reply_markup=get_waiting_keyboard()
         )
 
 

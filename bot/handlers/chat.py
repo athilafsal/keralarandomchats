@@ -38,7 +38,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Get current pair
     pair_id = await get_user_pair(user_id)
     if not pair_id:
-        # Not in a chat, ignore or prompt to use /next
+        # Not in a chat, show main menu
+        from bot.utils.keyboards import get_main_menu_keyboard
+        await update.message.reply_text(
+            "💬 You're not in a chat right now.\n\n"
+            "Tap below to find someone to chat with:",
+            reply_markup=get_main_menu_keyboard()
+        )
         return
     
     # Sanitize and validate message
@@ -54,8 +60,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     if not pair_data or not pair_data['is_active']:
+        from bot.utils.keyboards import get_main_menu_keyboard
         await update.message.reply_text(
-            "This chat has ended. Use /next to find someone new."
+            "💬 This chat has ended.\n\n"
+            "Tap below to find someone new:",
+            reply_markup=get_main_menu_keyboard()
         )
         return
     

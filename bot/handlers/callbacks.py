@@ -4,7 +4,7 @@ Callback query handlers for inline buttons
 from telegram import Update
 from telegram.ext import ContextTypes
 from bot.database.connection import fetch_query, execute_query
-from bot.services.matchmaking import add_to_queue, try_match, remove_from_queue, get_user_pair, end_pair
+from bot.services.matchmaking import add_to_queue, try_match, remove_from_queue, get_user_pair, end_pair, create_pair
 from bot.services.admin_service import check_admin_access
 from bot.handlers.onboarding import get_onboarding_state, set_onboarding_state, complete_onboarding, clear_onboarding_state
 from bot.utils.keyboards import (
