@@ -29,7 +29,10 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     if not query:
         return
     
-    await query.answer()  # Acknowledge the callback
+    try:
+        await query.answer()  # Acknowledge the callback
+    except Exception as e:
+        logger.error(f"Error answering callback: {e}")
     
     user = update.effective_user
     if not user:
@@ -38,54 +41,69 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     user_id = user.id
     data = query.data
     
-    # Handle onboarding callbacks
-    if data.startswith("gender_"):
-        await handle_gender_callback(query, context, data)
-    elif data.startswith("lang_"):
-        await handle_language_callback(query, context, data)
-    elif data.startswith("age_"):
-        await handle_age_callback(query, context, data)
-    elif data == "skip":
-        await handle_skip_callback(query, context)
+    logger.info(f"Received callback: {data} from user {user_id}")
     
-    # Handle main menu callbacks
-    elif data == "find_chat":
-        await handle_find_chat(query, context)
-    elif data == "main_menu":
-        await handle_main_menu(query, context)
-    elif data == "stop_chat":
-        await handle_stop_chat(query, context)
-    elif data == "next_person":
-        await handle_next_person(query, context)
-    elif data == "cancel_search":
-        await handle_cancel_search(query, context)
-    elif data == "block_user":
-        await handle_block_user(query, context)
-    elif data == "report_user":
-        await handle_report_user(query, context)
-    
-    # Handle admin callbacks
-    elif data.startswith("admin_"):
-        await handle_admin_callback(query, context, data)
-    
-    # Handle settings callbacks
-    elif data == "settings":
-        await handle_settings(query, context)
-    elif data.startswith("settings_"):
-        await handle_settings_callback(query, context, data)
-    
-    # Handle main menu callbacks
-    elif data == "my_stats":
-        await handle_my_stats(query, context)
-    elif data == "invite":
-        await handle_invite_callback(query, context)
-    elif data == "help":
-        await handle_help(query, context)
-    elif data.startswith("profile_edit_"):
-        await handle_profile_edit_field(query, context, data)
-    
-    else:
-        await query.edit_message_text("❌ Unknown action. Please try again.")
+    try:
+        # Handle onboarding callbacks
+        if data.startswith("gender_"):
+            await handle_gender_callback(query, context, data)
+        elif data.startswith("lang_"):
+            await handle_language_callback(query, context, data)
+        elif data.startswith("age_"):
+            await handle_age_callback(query, context, data)
+        elif data == "skip":
+            await handle_skip_callback(query, context)
+        
+        # Handle admin callbacks (check early)
+        elif data.startswith("admin_"):
+            await handle_admin_callback(query, context, data)
+        
+        # Handle settings callbacks
+        elif data == "settings":
+            await handle_settings(query, context)
+        elif data.startswith("settings_"):
+            await handle_settings_callback(query, context, data)
+        
+        # Handle main menu callbacks
+        elif data == "find_chat":
+            await handle_find_chat(query, context)
+        elif data == "main_menu":
+            await handle_main_menu(query, context)
+        elif data == "stop_chat":
+            await handle_stop_chat(query, context)
+        elif data == "next_person":
+            await handle_next_person(query, context)
+        elif data == "cancel_search":
+            await handle_cancel_search(query, context)
+        elif data == "block_user":
+            await handle_block_user(query, context)
+        elif data == "report_user":
+            await handle_report_user(query, context)
+        elif data == "my_stats":
+            await handle_my_stats(query, context)
+        elif data == "invite":
+            await handle_invite_callback(query, context)
+        elif data == "help":
+            await handle_help(query, context)
+        elif data.startswith("profile_edit_"):
+            await handle_profile_edit_field(query, context, data)
+        
+        else:
+            logger.warning(f"Unknown callback data: {data}")
+            try:
+                await query.edit_message_text("❌ Unknown action. Please try again.")
+            except:
+                await query.message.reply_text("❌ Unknown action. Please try again.")
+    except Exception as e:
+        logger.error(f"Error handling callback {data}: {e}", exc_info=True)
+        try:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
+        except:
+            pass
+        try:
+            await query.message.reply_text(f"❌ Error: {str(e)}")
+        except:
+            pass
 
 
 async def handle_gender_callback(query, context, data):
