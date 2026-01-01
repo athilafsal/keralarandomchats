@@ -524,12 +524,19 @@ async def handle_admin_callback(query, context, data):
             for queue, size in list(queue_sizes.items())[:5]:  # Show first 5
                 message += f"• {queue}: {size}\n"
         
-        await query.edit_message_text(
-            message,
-            reply_markup=get_admin_keyboard()
-        )
+            try:
+                await query.edit_message_text(
+                    message,
+                    reply_markup=get_admin_keyboard()
+                )
+            except Exception as e:
+                logger.error(f"Error editing message for admin_list_online: {e}")
+                await query.message.reply_text(
+                    message,
+                    reply_markup=get_admin_keyboard()
+                )
         
-    elif data == "admin_stats":
+        elif data == "admin_stats":
         from bot.database.connection import fetch_query
         
         # Get basic statistics
@@ -551,78 +558,150 @@ async def handle_admin_callback(query, context, data):
         message += f"🚫 Banned users: {banned_users_count}\n"
         message += f"⚠️ Pending reports: {pending_reports_count}\n"
         
-        await query.edit_message_text(
-            message,
-            reply_markup=get_admin_keyboard()
-        )
+            try:
+                await query.edit_message_text(
+                    message,
+                    reply_markup=get_admin_keyboard()
+                )
+            except Exception as e:
+                logger.error(f"Error editing message for admin_stats: {e}")
+                await query.message.reply_text(
+                    message,
+                    reply_markup=get_admin_keyboard()
+                )
         
-    elif data == "admin_view_pair_menu":
+        elif data == "admin_view_pair_menu":
         # Store pending action in Redis
         from bot.services.redis_client import get_redis
         redis_client = await get_redis()
         await redis_client.setex(f"admin_pending:{user_id}", 300, "view_pair")
         
-        await query.edit_message_text(
-            "🔍 View Pair Info\n\n"
-            "Please send the user_id you want to view pair info for:",
-            reply_markup=get_admin_keyboard()
-        )
+            try:
+                await query.edit_message_text(
+                    "🔍 View Pair Info\n\n"
+                    "Please send the user_id you want to view pair info for:",
+                    reply_markup=get_admin_keyboard()
+                )
+            except Exception as e:
+                logger.error(f"Error editing message for admin_view_pair_menu: {e}")
+                await query.message.reply_text(
+                    "🔍 View Pair Info\n\n"
+                    "Please send the user_id you want to view pair info for:",
+                    reply_markup=get_admin_keyboard()
+                )
         
-    elif data == "admin_force_pair_menu":
+        elif data == "admin_force_pair_menu":
         # Store pending action
         from bot.services.redis_client import get_redis
         redis_client = await get_redis()
         await redis_client.setex(f"admin_pending:{user_id}", 300, "force_pair")
         
-        await query.edit_message_text(
-            "🔗 Force Pair Users\n\n"
-            "Please send two user_ids separated by space:\n"
-            "Example: `123456789 987654321`",
-            reply_markup=get_admin_keyboard(),
-            parse_mode='Markdown'
-        )
+            try:
+                await query.edit_message_text(
+                    "🔗 Force Pair Users\n\n"
+                    "Please send two user_ids separated by space:\n"
+                    "Example: `123456789 987654321`",
+                    reply_markup=get_admin_keyboard(),
+                    parse_mode='Markdown'
+                )
+            except Exception as e:
+                logger.error(f"Error editing message for admin_force_pair_menu: {e}")
+                await query.message.reply_text(
+                    "🔗 Force Pair Users\n\n"
+                    "Please send two user_ids separated by space:\n"
+                    "Example: `123456789 987654321`",
+                    reply_markup=get_admin_keyboard(),
+                    parse_mode='Markdown'
+                )
         
-    elif data == "admin_ban_menu":
+        elif data == "admin_ban_menu":
         # Store pending action
         from bot.services.redis_client import get_redis
         redis_client = await get_redis()
         await redis_client.setex(f"admin_pending:{user_id}", 300, "ban")
         
-        await query.edit_message_text(
-            "🚫 Ban User\n\n"
-            "Please send the user_id you want to ban:",
-            reply_markup=get_admin_keyboard()
-        )
+            try:
+                await query.edit_message_text(
+                    "🚫 Ban User\n\n"
+                    "Please send the user_id you want to ban:",
+                    reply_markup=get_admin_keyboard()
+                )
+            except Exception as e:
+                logger.error(f"Error editing message for admin_ban_menu: {e}")
+                await query.message.reply_text(
+                    "🚫 Ban User\n\n"
+                    "Please send the user_id you want to ban:",
+                    reply_markup=get_admin_keyboard()
+                )
         
-    elif data == "admin_unban_menu":
+        elif data == "admin_unban_menu":
         # Store pending action
         from bot.services.redis_client import get_redis
         redis_client = await get_redis()
         await redis_client.setex(f"admin_pending:{user_id}", 300, "unban")
         
-        await query.edit_message_text(
-            "✅ Unban User\n\n"
-            "Please send the user_id you want to unban:",
-            reply_markup=get_admin_keyboard()
-        )
+            try:
+                await query.edit_message_text(
+                    "✅ Unban User\n\n"
+                    "Please send the user_id you want to unban:",
+                    reply_markup=get_admin_keyboard()
+                )
+            except Exception as e:
+                logger.error(f"Error editing message for admin_unban_menu: {e}")
+                await query.message.reply_text(
+                    "✅ Unban User\n\n"
+                    "Please send the user_id you want to unban:",
+                    reply_markup=get_admin_keyboard()
+                )
         
-    elif data == "admin_disconnect_menu":
+        elif data == "admin_disconnect_menu":
         # Store pending action
         from bot.services.redis_client import get_redis
         redis_client = await get_redis()
         await redis_client.setex(f"admin_pending:{user_id}", 300, "disconnect")
         
-        await query.edit_message_text(
-            "🔌 Disconnect User\n\n"
-            "Please send the user_id you want to disconnect from their chat:",
-            reply_markup=get_admin_keyboard()
-        )
+            try:
+                await query.edit_message_text(
+                    "🔌 Disconnect User\n\n"
+                    "Please send the user_id you want to disconnect from their chat:",
+                    reply_markup=get_admin_keyboard()
+                )
+            except Exception as e:
+                logger.error(f"Error editing message for admin_disconnect_menu: {e}")
+                await query.message.reply_text(
+                    "🔌 Disconnect User\n\n"
+                    "Please send the user_id you want to disconnect from their chat:",
+                    reply_markup=get_admin_keyboard()
+                )
         
-    else:
-        await query.edit_message_text(
-            "Admin feature coming soon!",
-            reply_markup=get_admin_keyboard()
-        )
+        else:
+            try:
+                await query.edit_message_text(
+                    f"Admin feature coming soon!\n\n"
+                    f"Received callback: {data}",
+                    reply_markup=get_admin_keyboard()
+                )
+            except Exception as e:
+                logger.error(f"Error editing message for unknown admin callback: {e}")
+                await query.message.reply_text(
+                    f"Admin feature coming soon!\n\n"
+                    f"Received callback: {data}",
+                    reply_markup=get_admin_keyboard()
+                )
+    except Exception as e:
+        logger.error(f"Error in admin callback {data}: {e}", exc_info=True)
+        try:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
+        except:
+            pass
+        try:
+            await query.message.reply_text(
+                f"❌ Error: {str(e)}\n\n"
+                "Please try again.",
+                reply_markup=get_admin_keyboard()
+            )
+        except:
+            pass
 
 
 async def handle_settings(query, context):
